@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>간단 채팅 앱</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Full viewport height */
+            box-sizing: border-box; /* Include padding and border in the element's total width and height */
+        }
+
+        /* Chat Styles */
+        .chat-container {
+            width: min(90vw, 400px); /* 화면 너비의 90%를 사용하되, 최대 400px */
+            height: min(90vh, 600px); /* 화면 높이의 90%를 사용하되, 최대 600px */
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            overflow: hidden; /* Ensure content stays within bounds */
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            flex-shrink: 0; /* Prevent header from shrinking */
+        }
+
+        .chat-header h3 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+
+        .id-input-area {
+            display: flex;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            flex-shrink: 0; /* Prevent input area from shrinking */
+        }
+
+        .id-input-area input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            margin-right: 10px;
+            font-size: 0.9em;
+        }
+
+        .id-input-area button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 0.9em;
+            flex-shrink: 0;
+        }
+
+        .id-input-area button:hover {
+            background-color: #0056b3;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: #f9f9f9;
+            border-bottom: 1px solid #eee;
+        }
+
+        .message-item {
+            margin-bottom: 10px;
+            background-color: #e6e6e6;
+            padding: 8px 12px;
+            border-radius: 15px;
+            word-wrap: break-word;
+        }
+
+        .message-meta {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 3px;
+        }
+
+        .message-user {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .message-time {
+            font-size: 0.7em;
+            color: #999;
+        }
+
+        .message-text {
+            font-size: 1em;
+            color: #333;
+        }
+
+        .chat-input-area {
+            display: flex;
+            padding: 10px 15px;
+            border-top: 1px solid #ddd;
+            flex-shrink: 0; /* Prevent input area from shrinking */
+        }
+
+        .chat-input-area input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            margin-right: 10px;
+            font-size: 0.9em;
+        }
+
+        .chat-input-area button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 0.9em;
+            flex-shrink: 0;
+        }
+
+        .chat-input-area button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Responsive adjustments */
+        .chat-header,
+        .id-input-area,
+        .chat-input-area {
+            padding: 10px; /* Slightly reduced padding */
+        }
+
+        .chat-header h3 {
+            font-size: 1.3em;
+        }
+
+        .id-input-area input,
+        .id-input-area button,
+        .chat-input-area input,
+        .chat-input-area button {
+            font-size: 1em; /* Slightly larger font for readability on mobile */
+            padding: 12px; /* Larger touch targets */
+        }
+
+        .message-item {
+            padding: 10px 15px; /* Slightly larger padding for messages */
+        }
+
+        .message-meta {
+            font-size: 0.9em;
+        }
+
+        .message-text {
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <!-- Chat Container -->
+    <div id="chatContainer" class="chat-container">
+        <div class="chat-header">
+            <h3>실시간 채팅</h3>
+            <!-- Close button removed -->
+        </div>
+        <div class="id-input-area">
+            <input type="text" id="userIdInput" placeholder="아이디를 입력하세요">
+            <button id="setUserIdButton">설정</button>
+        </div>
+        <div id="messages" class="chat-messages">
+            <!-- Messages will be loaded here -->
+        </div>
+        <div class="chat-input-area">
+            <input type="text" id="messageInput" placeholder="메시지를 입력하세요...">
+            <button id="sendMessage">전송</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script>
+        // Your web app's Firebase configuration
+        // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+        const firebaseConfig = {
+            apiKey: "AIzaSyAV6MLaxi_yzVmU4i6MlJVL1MfY0sJ_tQk",
+            authDomain: "texttest-1a180.firebaseapp.com",
+            projectId: "texttest-1a180",
+            storageBucket: "texttest-1a180.firebasestorage.app",
+            messagingSenderId: "570277037393",
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+        const messagesRef = database.ref('messages');
+
+        let currentUser = localStorage.getItem('chatUserId');
+        if (!currentUser) {
+            // Generate an anonymous ID if not found in localStorage
+            currentUser = '익명_' + Date.now();
+            localStorage.setItem('chatUserId', currentUser);
+            console.log("익명 아이디가 자동으로 설정되었습니다:", currentUser);
+        }
+
+        const userIdInput = document.getElementById('userIdInput');
+        const setUserIdButton = document.getElementById('setUserIdButton');
+        const messageInput = document.getElementById('messageInput');
+        const sendMessageButton = document.getElementById('sendMessage');
+        const messagesDiv = document.getElementById('messages');
+
+        // Authenticate anonymously
+        auth.signInAnonymously().catch((error) => {
+            console.error("익명 로그인 오류:", error);
+            alert("채팅 서비스에 연결할 수 없습니다. 콘솔을 확인하세요.");
+        });
+
+        // Listen for new messages
+        messagesRef.on('child_added', (snapshot) => {
+            const message = snapshot.val();
+            displayMessage(message); // 메시지 객체 전체를 전달
+        });
+
+        // Set user ID
+        function setUserId() {
+            let userId = userIdInput.value.trim();
+            if (userId === '') {
+                // If input is empty, generate an anonymous ID, save it, but don't display it in the input field.
+                // Only generate a *new* anonymous ID if the current one is not already anonymous.
+                if (!currentUser || !currentUser.startsWith('익명_')) {
+                    currentUser = '익명_' + Date.now();
+                    localStorage.setItem('chatUserId', currentUser);
+                    console.log("아이디가 비어있어 익명 아이디가 자동으로 설정되었습니다:", currentUser);
+                } else {
+                    console.log("아이디가 비어있지만 이미 익명 아이디가 설정되어 있습니다:", currentUser);
+                }
+                alert('아이디가 설정되었습니다. (현재 아이디: ' + currentUser + ')'); // Inform the user
+            } else {
+                localStorage.setItem('chatUserId', userId);
+                currentUser = userId;
+                alert('아이디가 "' + currentUser + '"(으)로 설정되었습니다.');
+            }
+            userIdInput.value = ''; // Always clear the input field after clicking "설정"
+        }
+
+        setUserIdButton.addEventListener('click', setUserId);
+        userIdInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                setUserId();
+            }
+        });
+
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage(); // 텍스트 메시지 전송
+            }
+        });
+
+        sendMessageButton.addEventListener('click', () => {
+            sendMessage(); // 텍스트 메시지 전송
+        });
+
+        // 메시지 전송 함수 (이미지/텍스트 모두 처리)
+        async function sendMessage(text = null, imageUrl = null) {
+            const messageText = messageInput.value.trim();
+            if (messageText === '') {
+                alert('메시지를 입력해주세요.');
+                return;
+            }
+
+            if (!currentUser) {
+                currentUser = '익명_' + Date.now();
+                localStorage.setItem('chatUserId', currentUser);
+                console.warn("메시지 전송 시 currentUser가 없어 익명 아이디가 새로 설정되었습니다:", currentUser);
+            }
+
+            try {
+                await messagesRef.push({
+                    user: currentUser,
+                    text: messageText,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                });
+                messageInput.value = '';
+                messagesDiv.scrollTop = messagesDiv.scrollHeight; // 스크롤을 맨 아래로
+            } catch (error) {
+                console.error("메시지 전송 오류:", error);
+                alert("메시지 전송에 실패했습니다. 콘솔을 확인하세요.");
+            }
+        }
+
+        // Display message in chat window
+        function displayMessage(messageData) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message-item');
+
+            const date = new Date(messageData.timestamp);
+            const timeString = date.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+
+            const contentHTML = `<div class="message-text">${messageData.text}</div>`;
+
+            messageElement.innerHTML = `
+                <div class="message-meta">
+                    <span class="message-user">${messageData.user}</span>
+                    <span class="message-time">${timeString}</span>
+                </div>
+                ${contentHTML}
+            `;
+            messagesDiv.appendChild(messageElement);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; // 스크롤을 맨 아래로
+        }
+    </script>
+</body>
+</html> 
